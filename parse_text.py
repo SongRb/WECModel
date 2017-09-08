@@ -1,8 +1,8 @@
+# Runs on python2
+import json
 import re
-import string
 import sys
 import unicodedata
-import json
 from HTMLParser import HTMLParser
 from bs4 import BeautifulSoup
 
@@ -27,18 +27,17 @@ def build_table():
         table[id] = unicode(' ')
     return table
 
+
+TABLE = build_table()
+
+
 # Remove all punctuation from text
 def remove_punctuation(text):
-    text = text.translate(table)
+    text = text.translate(TABLE)
     text = text.replace('\n', ' ')
     text = text.replace('\r', ' ')
     text = re.sub(' +', ' ', text)
     return text
-
-
-def test_trans(s):
-    table = string.maketrans("", "")
-    return s.translate(table, deletechars=string.punctuation)
 
 
 def get_qa_pair(result_db):
@@ -49,13 +48,12 @@ def get_qa_pair(result_db):
             result_db[p_id]['subject'])
         f_result_db[p_id]['answer'] = remove_punctuation(
             result_db[p_id]['answer'])
-	print len(f_result_db)
-	return f_result_db
-
+    print len(f_result_db)
+    return f_result_db
 
 
 # Convert json file into IBM Model readable format
-def build_model_input(db,fout_name):
+def build_model_input(db, fout_name):
     with open(fout_name, 'w') as fout:
         cnt = 0
         for post_id in db:
@@ -85,6 +83,7 @@ def json2wordvec():
 # Read from original Webscope_L4 format file
 # Output
 def parse_text(res, obj, pair_id, key):
+    h = HTMLParser()
     try:
         res[pair_id][key] = h.unescape(obj.get_text())
     except:
@@ -139,9 +138,9 @@ def get_certain_cat(cat_name='Business & Finance'):
     bus_cat = grasp_category(split_category(db), cat_name)
     save_json('{0}_db.json'.format(cat_name), bus_cat)
 
-table = build_table()
-input = load_json('bus_db.json')
-qa_pair = get_qa_pair(input)
-build_model_input(qa_pair,'YahooBusPost.dat')
 
-
+if __name__ == '__main__':
+    remove_punctuation('Hello world')
+    # input = load_json('bus_db.json')
+    # qa_pair = get_qa_pair(input)
+    # build_model_input(qa_pair, 'YahooBusPost.dat')
