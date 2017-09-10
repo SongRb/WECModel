@@ -14,7 +14,7 @@ def cos_func(a, b):
     return tf.reduce_sum(tf.multiply(normalize_a, normalize_b))
 
 
-work_dir = os.path.join('data', 'train3')
+work_dir = os.path.join('work', 'train3')
 dataset_name = 'dataset-yahoo-bus.pkl'
 
 if platform.system().startswith('Windows'):
@@ -48,9 +48,9 @@ else:
         else:
             missing_set.append(tuple(pair))
 
-    train_x = list();
-    train_w = list();
-    train_y = list();
+    train_x = list()
+    train_w = list()
+    train_y = list()
     for line in train_set:
         train_x.append(line[0])
         train_y.append(line[1])
@@ -78,7 +78,7 @@ test_data, test_labels = zip(*ds[_train_size:])
 print('Dataset generated')
 
 # define the computational graph
-print('Setting perferences')
+print('Setting preferences')
 graph = tf.Graph()
 with graph.as_default():
     # declare graph inputs
@@ -113,17 +113,16 @@ with tf.Session(graph=graph) as s:
                                               y_train: train_labels,
                                               x_test: test_data,
                                               y_test: test_labels})
-        if (step % 10 == 0):
+        if step % 200 == 0:
             # it should return bias close to zero and parameters all close to 1 (see definition of f)
             print("\nAfter", step, "iterations:")
             # print("   Bias =", theta_0.eval(), ", Weights = ", theta.eval())
             print("   train cost =", train_c)
             print("   test cost =", test_c)
-    time_str = time.strftime("%Y%m%d-%H%M%S")
-    os.makedirs(os.path.join(work_dir, time_str))
-    save_path = saver.save(s, os.path.join(work_dir, time_str, 'model.ckpt'))
-    print(save_path)
-
-with tf.Session() as sess:
-    tf.initialize_all_variables().run()
-    np.save(os.path.join(work_dir, time_str, 't_matrix'), sess.run('t_matrix:0'))
+            time_str = time.strftime("%Y%m%d-%H%M%S")
+            time_str+='-'
+            time_str+=str(step)
+            os.makedirs(os.path.join(work_dir, time_str))
+            save_path = saver.save(s, os.path.join(work_dir, time_str, 'model.ckpt'))
+            print(save_path)
+            np.save(os.path.join(work_dir, time_str,'t_matrix'),s.run('t_matrix:0'))

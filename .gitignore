@@ -1,3 +1,5 @@
 # Created by .ignore support plugin (hsz.mobi)
 .idea/
 *.pyc
+work/
+data/prob_table-yahoo-bus.json
