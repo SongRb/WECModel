@@ -11,69 +11,54 @@ import tensorflow as tf
 def cos_func(a, b):
     normalize_a = tf.nn.l2_normalize(a, 0)
     normalize_b = tf.nn.l2_normalize(b, 0)
-    return tf.reduce_sum(tf.multiply(normalize_a, normalize_b))
+    return -tf.reduce_sum(tf.multiply(normalize_a, normalize_b))
+
+def trans(a):
+    a = np.asarray(a)
+    return a.transpose()
+
+def load_model(filename):
+    with tf.Session() as sess:
+        new_saver = tf.train.import_meta_graph(filename)
+        new_saver.restore(sess, tf.train.latest_checkpoint('./'))
+        tf.initialize_all_variables().run()
+        return sess.run('t_matrix:0')
+
+def random_init():
+    return np.random.uniform(low=-0.01, high=0.01, size=(DIMENSIONS, DIMENSIONS))
+
+def saved_init(filename):
+    return np.load(filename)
+    
+
+work_dir = os.path.join('work', 'L6-1')
+dataset_name = 'WEC-L6-1-input.npz'
 
 
-work_dir = os.path.join('work', 'train3')
-dataset_name = 'dataset-yahoo-bus.pkl'
+npzfile = np.load(os.path.join(work_dir,'WEC-L6-1-input.npz'))
+train_x = npzfile['x']
+train_y = npzfile['y']
+train_w = npzfile['w']
 
-if platform.system().startswith('Windows'):
-    print('Skipped word2vec processing')
-    print('Loading from cached file')
-
-    with open(os.path.join(work_dir, dataset_name), 'rb') as fin:
-        db = pickle.load(fin, encoding='latin1')
-        train_x = db['x']
-        train_y = db['y']
-        train_w = db['w']
-else:
-    try:
-        import word2vec
-    except ImportError:
-        print('word2vec required. Install it via pip')
-
-    with open('probTable.json', 'r') as fin:
-        import json
-
-        db = json.load(fin)
-
-    model = word2vec.load('./text8.bin')
-    vocab = [unicode(i) for i in model.vocab]
-    vocab = set(vocab)
-    train_set = list()
-    missing_set = list()
-    for pair in db:
-        if pair[0] in vocab and pair[1] in vocab:
-            train_set.append((model[pair[0]], model[pair[1]], float(pair[2])))
-        else:
-            missing_set.append(tuple(pair))
-
-    train_x = list()
-    train_w = list()
-    train_y = list()
-    for line in train_set:
-        train_x.append(line[0])
-        train_y.append(line[1])
-        train_w.append(line[2])
-    train_x = np.array(train_x)
-    train_y = np.array(train_y)
-    train_w = np.array(train_w)
 
 print('Successfully load train dataset')
 print('Processing data with tensorflow...')
-
+# DIMENSIONS=100
 DIMENSIONS = len(train_x[0])
-DS_SIZE = len(train_w)
-ds = [(train_x[i], train_y[i]) for i in range(len(train_x))]
+DS_SIZE = len(train_x)
+# Creating training pair
+ds = [(train_x[i], train_y[i]) for i in range(DS_SIZE)]
 np.random.shuffle(ds)
 TRAIN_RATIO = 0.6  # 60% of the dataset is used for training
 _train_size = int(DS_SIZE * TRAIN_RATIO)
 _test_size = DS_SIZE - _train_size
-ALPHA = 1e-8  # learning rate
+ALPHA = 3e-7  # learning rate
 LAMBDA = 0.5  # L2 regularization factor
-TRAINING_STEPS = 2000
-train_data, train_labels = zip(*ds[0:_train_size])
-test_data, test_labels = zip(*ds[_train_size:])
+TRAINING_STEPS = 20001
+# Swap train data and test data
+train_data, train_labels = map(trans,zip(*ds[_train_size:]))
+
+test_data, test_labels =map(trans, zip(*ds[0:_train_size]))
 
 print('Dataset generated')
 
@@ -82,23 +67,35 @@ print('Setting preferences')
 graph = tf.Graph()
 with graph.as_default():
     # declare graph inputs
-    x_train = tf.placeholder(tf.float32, shape=(_train_size, DIMENSIONS))
-    y_train = tf.placeholder(tf.float32, shape=(_train_size, DIMENSIONS))
-    x_test = tf.placeholder(tf.float32, shape=(_test_size, DIMENSIONS))
-    y_test = tf.placeholder(tf.float32, shape=(_test_size, DIMENSIONS))
+    # x_train = tf.placeholder(tf.float32, shape=(_train_size, DIMENSIONS))
+    # y_train = tf.placeholder(tf.float32, shape=(_train_size, DIMENSIONS))
+    # x_test = tf.placeholder(tf.float32, shape=(_test_size, DIMENSIONS))
+    # y_test = tf.placeholder(tf.float32, shape=(_test_size, DIMENSIONS))
+
+    # Now we swap test set and train set
+    # 
+    x_train = tf.placeholder(tf.float32, shape=( DIMENSIONS,_test_size,))
+    y_train = tf.placeholder(tf.float32, shape=(DIMENSIONS,_test_size))
+    x_test = tf.placeholder(tf.float32, shape=( DIMENSIONS,_train_size,))
+    y_test = tf.placeholder(tf.float32, shape=(DIMENSIONS,_train_size))
 
     theta = tf.Variable(
-        np.random.uniform(low=-0.01, high=0.01, size=(DIMENSIONS, DIMENSIONS)),
+        np.random.uniform(low=-0.1, high=0.1, size=(DIMENSIONS, DIMENSIONS)),
         dtype=np.float32, name='t_matrix')
-    theta_0 = tf.Variable(
-        [[0.0] for _ in range(DIMENSIONS)])  # don't forget the bias term!
+
+    # theta = tf.Variable(
+    #     saved_init(os.path.join('work','L6-1','20171029-202021-800','t_matrix.npy')),
+    #     dtype=np.float32, name='t_matrix')
+
 
     # forward propagation
-    train_prediction = tf.matmul(x_train, theta)
-    test_prediction = tf.matmul(x_test, theta)
-    train_cost = tf.abs(cos_func(train_prediction, y_train))
+    # train_prediction = tf.matmul(x_train, theta)
+    # test_prediction = tf.matmul(x_test, theta)
+    train_prediction = tf.matmul(theta, x_train)
+    test_prediction = tf.matmul(theta, x_test)
+    train_cost = cos_func(train_prediction, y_train)
     optimizer = tf.train.GradientDescentOptimizer(ALPHA).minimize(train_cost)
-    test_cost = tf.abs(cos_func(test_prediction, y_test))
+    test_cost = cos_func(test_prediction, y_test)
 
 # run the computation
 print('Running...')
@@ -124,5 +121,7 @@ with tf.Session(graph=graph) as s:
             time_str+=str(step)
             os.makedirs(os.path.join(work_dir, time_str))
             save_path = saver.save(s, os.path.join(work_dir, time_str, 'model.ckpt'))
-            print(save_path)
+            with open(os.path.join(work_dir, time_str,'status.txt'),'w') as fout:
+                fout.write(str(train_c)+' '+str(test_c))
             np.save(os.path.join(work_dir, time_str,'t_matrix'),s.run('t_matrix:0'))
+            print("Saved in",save_path)
