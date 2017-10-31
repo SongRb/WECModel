@@ -3,3 +3,4 @@
 *.pyc
 work/
 data/prob_table-yahoo-bus.json
+backup/
