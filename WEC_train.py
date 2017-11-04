@@ -15,8 +15,8 @@ train_size = 0
 def cos_func(a, b):
     normalize_a = tf.nn.l2_normalize(a, 0)
     normalize_b = tf.nn.l2_normalize(b, 0)
-
-    return tf.to_float(1, name='ToFloat') - tf.reduce_sum(tf.multiply(normalize_a, normalize_b))
+    res = -tf.reduce_sum(tf.multiply(normalize_a, normalize_b))
+    return res
 
 
 def trans(a):
@@ -61,12 +61,19 @@ np.random.shuffle(ds)
 TRAIN_RATIO = 0.6  # 60% of the dataset is used for training
 _train_size = int(DS_SIZE * TRAIN_RATIO)
 _test_size = DS_SIZE - _train_size
-ALPHA = 1e-5  # learning rate
+STARTING_ALPHA = 0.25  # learning rate
+ENDING_ALPHA = 0.001
+ALPHA = STARTING_ALPHA
 LAMBDA = 0.5  # L2 regularization factor
-TRAINING_STEPS = 20001
+TRAINING_STEPS = 100001
+
+DEBUG_STEPS = 200
+ALPHA_STEP = STARTING_ALPHA/(TRAINING_STEPS/(2*DEBUG_STEPS))
+
 # Swap train data and test data
 train_data, train_labels = map(trans, zip(*ds[0:_train_size]))
 train_size = len(train_data[0])
+print("Train size: ",train_size)
 test_data, test_labels = map(trans, zip(*ds[_train_size:]))
 test_size = len(test_data[0])
 print('Dataset generated')
@@ -81,14 +88,17 @@ with graph.as_default():
     x_test = tf.placeholder(tf.float32, shape=(DIMENSIONS, test_size))
     y_test = tf.placeholder(tf.float32, shape=(DIMENSIONS, test_size))
     
-    # theta = tf.Variable(
-    # np.random.uniform(low=-0.1, high=0.1, size=(DIMENSIONS, DIMENSIONS)),
-    # dtype=np.float32, name='t_matrix')
 
-    theta = tf.Variable(
-        saved_init(os.path.join(
-            work_dir, model_id, 't_matrix.npy')),
+    try:
+        theta = tf.Variable(
+            saved_init(os.path.join(
+                work_dir, model_id, 't_matrix.npy')),
+            dtype=np.float32, name='t_matrix')
+    except IOError:
+        theta = tf.Variable(
+        np.random.uniform(low=-1, high=1, size=(DIMENSIONS, DIMENSIONS)),
         dtype=np.float32, name='t_matrix')
+
 
     # forward propagation
     train_prediction = tf.matmul(theta, x_train)
@@ -110,10 +120,17 @@ with tf.Session(graph=graph) as s:
                                               y_train: train_labels,
                                               x_test: test_data,
                                               y_test: test_labels})
-        if step % 200 == 0:
+        if step % DEBUG_STEPS == 0:
             print("\nAfter", step, "iterations:")
-            print("  Relative train cost =", train_c / train_size)
-            print("  Relative test cost =", test_c / test_size)
+            print("\tRelative train cost =",(train_size+train_c) / train_size)
+            print("\tRelative test cost =", (test_size+test_c) / test_size)
+
+            # Slightly decrease learning alpha
+            ALPHA-=ALPHA_STEP
+            if ALPHA<ENDING_ALPHA:ALPHA = ENDING_ALPHA
+            print("\tLearning alpha changed into",ALPHA)
+
+            # Save model
             time_str = time.strftime("%Y%m%d-%H%M%S")+'-'+str(step)
             os.makedirs(os.path.join(work_dir, time_str))
             save_path = saver.save(s, os.path.join(
