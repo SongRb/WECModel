@@ -60,7 +60,7 @@ class WECRanker:
                 print 'Rate:', float(count) / (index + 1),
                 print "{0} processed".format(index)
             qa_pair = (self.question_list[index], self.answer_list[index])
-            answer_list = random.sample(self.question_list, 6)
+            answer_list = random.sample(self.question_list, 5)
             score_list = self.cal_set(answer_list, qa_pair[0])
             score = self.cal_score(qa_pair[1], qa_pair[0])
             score_list = sorted(score_list)

@@ -1,4 +1,5 @@
 # Runs on python3
+from __future__ import print_function
 import os
 import pickle
 import platform
@@ -7,14 +8,15 @@ import time
 import numpy as np
 import tensorflow as tf
 
+
 train_size = 0
 
-
+# Aim to reduce cost, we use negative cosine function here
 def cos_func(a, b):
     normalize_a = tf.nn.l2_normalize(a, 0)
     normalize_b = tf.nn.l2_normalize(b, 0)
 
-    return tf.to_float(tf.shape(normalize_a)[1], name='ToFloat') - tf.reduce_sum(tf.multiply(normalize_a, normalize_b))
+    return tf.to_float(1, name='ToFloat') - tf.reduce_sum(tf.multiply(normalize_a, normalize_b))
 
 
 def trans(a):
