@@ -1,11 +1,47 @@
+from __future__ import print_function
 import os
 import random
 
 import numpy as np
 import scipy.spatial.distance as dis
 import word2vec
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 from parse_text import remove_punctuation
+
+def increment(counter,key):
+    if key in counter:
+        counter[key]+=1
+    else: 
+        counter[key]=1
+
+def create_point(counter):
+    # key: length
+    # value: numbers
+    x_1 = list()
+    y_1 = list()
+    for k,v in counter.iteritems():
+        x_1.append(int(k))
+        y_1.append(int(v))
+    return x_1,y_1
+
+def draw_graph(x,y,name):
+    fig = plt.figure()
+    
+    plt.plot(x, y, 'b,')
+    # plt.axis([0, 4000, 0, 1000])
+    plt.xticks(np.arange(min(x), max(x)+1, (max(x)-min(x))/20))
+    ax = fig.axes[0]
+    # ax.autoscale(enable=True)
+    plt.setp(ax.get_xticklabels(), rotation=30, horizontalalignment='right')
+    # plt.show()
+    fig.suptitle(' '.join(name.split('_')).title())
+    fig.savefig('{0}.svg'.format(name),figsize=(2000,2000),dpi=1000)
+    # print rate_len_counter
+    
+    
 
 
 class WECRanker:
@@ -25,10 +61,35 @@ class WECRanker:
             self.answer_list = [unicode(i) for i in self.answer_list]
             self.question_list = [unicode(i) for i in self.question_list]
 
+        ans_len_counter = dict()
+        ques_len_counter = dict()
+        rate_len_counter = dict()
+        for index in xrange(len(self.answer_list)):
+            ans_length = len(self.answer_list[index])
+            if ans_length == 0:
+                continue 
+            ques_length = len(self.question_list[index])
+            increment(ans_len_counter,ans_length)
+            increment(ques_len_counter,ques_length)
+            try:
+                increment(rate_len_counter,float(ans_length)/ques_length)
+            except ZeroDivisionError:
+                pass
+        # for i in xrange(100):
+        #     if i in ans_len_counter:
+        #         print(i,': ',ans_len_counter[i])
+        x_1,y_1 =create_point(ans_len_counter)
+        x_2,y_2 = create_point(ques_len_counter)
+        x_3,y_3 = create_point(ques_len_counter)
+
+        draw_graph(x_1,y_1,'answer_length')
+        draw_graph(x_2,y_2,'question_length')
+        draw_graph(x_3,y_3,'a2q_length_ratio')
+
+
     @staticmethod
     def process_text(s):
         s = remove_punctuation(s.lower())
-
         return s.strip().split(' ')
 
     def cal_score(self, answer, question):
@@ -50,18 +111,17 @@ class WECRanker:
             return sum(total_score) / len(total_score)
         return 0
 
-    def cal_set(self, answer_list, question):
+    def cal_score_list(self, answer_list, question):
         return [self.cal_score(answer, question) for answer in answer_list]
 
     def validate_model(self):
         count = 0
         for index in range(len(self.question_list)):
             if index % 50 == 0:
-                print 'Rate:', float(count) / (index + 1),
-                print "{0} processed".format(index)
+                print('Rate:', float(count) / (index + 1),"{0} processed".format(index))
             qa_pair = (self.question_list[index], self.answer_list[index])
             answer_list = random.sample(self.question_list, 5)
-            score_list = self.cal_set(answer_list, qa_pair[0])
+            score_list = self.cal_score_list(answer_list, qa_pair[0])
             score = self.cal_score(qa_pair[1], qa_pair[0])
             score_list = sorted(score_list)
             if score > score_list[-1]:
@@ -77,4 +137,4 @@ if __name__ == '__main__':
     sys.setdefaultencoding("utf-8")
 
     ranker = WECRanker()
-    print ranker.validate_model()
+    print(ranker.validate_model())

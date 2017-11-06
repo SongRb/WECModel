@@ -10,8 +10,6 @@ import numpy as np
 import tensorflow as tf
 
 
-train_size = 0
-
 # Aim to reduce cost, we use negative cosine function here
 def cos_func(a, b):
     normalize_a = tf.nn.l2_normalize(a, 0)
@@ -45,7 +43,7 @@ def find_model_id(model_dir):
 
 work_dir = os.path.join('work', 'L6-1')
 dataset_name = 'WEC-L6-1-input.npz'
-model_id = find_model_id(work_dir)
+# model_id = find_model_id(work_dir)
 
 npzfile = np.load(os.path.join(work_dir, dataset_name))
 train_x = npzfile['x']
@@ -64,7 +62,7 @@ POS_DS_SIZE = len(train_x)
 
 SAMPLE_NUM=3
 ds = list()
-for i in xrange(POS_DS_SIZE):
+for i in range(POS_DS_SIZE):
     ds.append((train_x[i],train_y[i]))
     sample_count = 0
     while sample_count<SAMPLE_NUM:
@@ -73,7 +71,7 @@ for i in xrange(POS_DS_SIZE):
             ds.append((train_x[i],-train_y[random_index]))
             sample_count+=1
 
-np.random.shuffle(ds)
+
 
 #SAMPLE_RATIO = 0.2
 #ds=ds[0:int(SAMPLE_RATIO*len(ds))]
@@ -85,19 +83,25 @@ TRAIN_RATIO = 0.6  # 60% of the dataset is used for training
 _train_size = int(DS_SIZE * TRAIN_RATIO)
 _test_size = DS_SIZE - _train_size
 STARTING_ALPHA = 0.25  # learning rate
-ENDING_ALPHA = 0.001
-ALPHA = 0.234
+ENDING_ALPHA = 1e-4
+ALPHA = 1e-4
 LAMBDA = 0.5  # L2 regularization factor
 TRAINING_STEPS = 100001
 
 DEBUG_STEPS = 200
 ALPHA_STEP = STARTING_ALPHA/(TRAINING_STEPS/(2*DEBUG_STEPS))
 
-train_data, train_labels = map(trans, zip(*ds[0:_train_size]))
-train_size = len(train_data[0])
-print('Train size: ',train_size)
-test_data, test_labels = map(trans, zip(*ds[_train_size:]))
-test_size = len(test_data[0])
+print('Train size: ',_train_size)
+
+
+def generate_dataset(data_set):
+    np.random.shuffle(data_set)
+    train_data, train_labels = map(trans, zip(*data_set[0:_train_size]))
+    test_data, test_labels = map(trans, zip(*data_set[_train_size:]))
+    return train_data, train_labels, test_data, test_labels
+
+
+train_data, train_labels, test_data, test_labels = generate_dataset(ds)
 print('Dataset generated')
 
 # define the computational graph
@@ -105,10 +109,10 @@ print('Setting preferences')
 graph = tf.Graph()
 with graph.as_default():
     # declare graph inputs
-    x_train = tf.placeholder(tf.float32, shape=(DIMENSIONS, train_size))
-    y_train = tf.placeholder(tf.float32, shape=(DIMENSIONS, train_size))
-    x_test = tf.placeholder(tf.float32, shape=(DIMENSIONS, test_size))
-    y_test = tf.placeholder(tf.float32, shape=(DIMENSIONS, test_size))
+    x_train = tf.placeholder(tf.float32, shape=(DIMENSIONS, _train_size))
+    y_train = tf.placeholder(tf.float32, shape=(DIMENSIONS, _train_size))
+    x_test = tf.placeholder(tf.float32, shape=(DIMENSIONS, _test_size))
+    y_test = tf.placeholder(tf.float32, shape=(DIMENSIONS, _test_size))
     
 
     try:
@@ -118,9 +122,10 @@ with graph.as_default():
             dtype=np.float32, name='t_matrix')
     except IOError:
         print('Saved model not found, will train from start')
-	theta = tf.Variable(
-			np.random.uniform(low=-1, high=1, size=(DIMENSIONS, DIMENSIONS)),
-    dtype=np.float32, name='t_matrix')
+        theta = tf.Variable(
+                np.random.uniform(low=-0.1, high=0.1, size=(DIMENSIONS,
+                                                         DIMENSIONS)),
+        dtype=np.float32, name='t_matrix')
 
 
     # forward propagation
@@ -138,15 +143,24 @@ with tf.Session(graph=graph) as s:
     print('Initialized')
     print(theta.eval())
     for step in range(3000,TRAINING_STEPS):
+        if step % 10000 == 0:
+            print('Shuffling train data and test data')
+            train_data, train_labels, test_data, test_labels = generate_dataset(
+                ds)
+
         _, train_c, test_c = s.run([optimizer, train_cost, test_cost],
                                    feed_dict={x_train: train_data,
                                               y_train: train_labels,
                                               x_test: test_data,
                                               y_test: test_labels})
+
+
+
         if step % DEBUG_STEPS == 0:
             print('\nAfter', step, 'iterations:')
-            print('\tRelative train cost =',(train_size+train_c) / train_size)
-            print('\tRelative test cost =', (test_size+test_c) / test_size)
+            print('\tRelative train cost =',(_train_size+train_c) /
+                  _train_size)
+            print('\tRelative test cost =', (_test_size+test_c) / _test_size)
 
             # Slightly decrease learning alpha
             ALPHA-=ALPHA_STEP

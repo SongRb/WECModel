@@ -71,17 +71,18 @@ def IBM_input(db, fout_name):
     with open(fout_name, 'w') as fout:
         cnt = 0
         for post_id in db:
-            line = {"content": db[post_id]['answer'],
-                    "source": "1",
-                    "title": db[post_id]['question'],
-                    "date": "1",
-                    "timestamp": "1",
-                    "resourceKey": "1",
-                    "tags": ['1'],
-                    "id": str(cnt),
-                    "summary": "1"}
-            fout.writelines(json.dumps(line) + '\n')
-            cnt = cnt + 1
+            if(len(db[post_id]['answer'])>5 and len(db[post_id]['question'])>5):
+                line = {"content": db[post_id]['answer'],
+                        "source": "1",
+                        "title": db[post_id]['question'],
+                        "date": "1",
+                        "timestamp": "1",
+                        "resourceKey": "1",
+                        "tags": ['1'],
+                        "id": str(cnt),
+                        "summary": "1"}
+                fout.writelines(json.dumps(line) + '\n')
+                cnt = cnt + 1
 
 
 # Convert Q&A pair into word2vec model input

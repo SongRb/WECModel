@@ -4,3 +4,13 @@
 work/
 data/prob_table-yahoo-bus.json
 backup/
+.vscode/
+a2q_length_ratio.svg
+answer.svg
+answer_length.png
+answer_length.svg
+myfig.png
+myfig.svg
+question.svg
+question_length.svg
+ratio.svg
