@@ -62,16 +62,21 @@ POS_DS_SIZE = len(train_x)
 # ds = [(train_x[i], train_y[i]) for i in range(DS_SIZE)]
 # np.random.shuffle(ds)
 
-SAMPLE_NUM=10
+SAMPLE_NUM=3
 ds = list()
 for i in xrange(POS_DS_SIZE):
     ds.append((train_x[i],train_y[i]))
     sample_count = 0
     while sample_count<SAMPLE_NUM:
-        random_index = random.randint(0,POS_DS_SIZE)
+        random_index = random.randint(0,POS_DS_SIZE-1)
         if random_index!=i:
             ds.append((train_x[i],-train_y[random_index]))
             sample_count+=1
+
+np.random.shuffle(ds)
+
+#SAMPLE_RATIO = 0.2
+#ds=ds[0:int(SAMPLE_RATIO*len(ds))]
 
 
 print('Positive and negative labels are generated...')
@@ -81,7 +86,7 @@ _train_size = int(DS_SIZE * TRAIN_RATIO)
 _test_size = DS_SIZE - _train_size
 STARTING_ALPHA = 0.25  # learning rate
 ENDING_ALPHA = 0.001
-ALPHA = STARTING_ALPHA
+ALPHA = 0.234
 LAMBDA = 0.5  # L2 regularization factor
 TRAINING_STEPS = 100001
 
@@ -107,15 +112,15 @@ with graph.as_default():
     
 
     try:
+        print(work_dir)
         theta = tf.Variable(
-            saved_init(os.path.join(
-                work_dir, model_id, 't_matrix.npy')),
+            np.load('t_matrix.npy'),
             dtype=np.float32, name='t_matrix')
     except IOError:
         print('Saved model not found, will train from start')
-        theta = tf.Variable(
-        np.random.uniform(low=-1, high=1, size=(DIMENSIONS, DIMENSIONS)),
-        dtype=np.float32, name='t_matrix')
+	theta = tf.Variable(
+			np.random.uniform(low=-1, high=1, size=(DIMENSIONS, DIMENSIONS)),
+    dtype=np.float32, name='t_matrix')
 
 
     # forward propagation
@@ -132,7 +137,7 @@ with tf.Session(graph=graph) as s:
     tf.initialize_all_variables().run()
     print('Initialized')
     print(theta.eval())
-    for step in range(TRAINING_STEPS):
+    for step in range(3000,TRAINING_STEPS):
         _, train_c, test_c = s.run([optimizer, train_cost, test_cost],
                                    feed_dict={x_train: train_data,
                                               y_train: train_labels,
@@ -154,7 +159,8 @@ with tf.Session(graph=graph) as s:
             save_path = saver.save(s, os.path.join(
                 work_dir, time_str, 'model.ckpt'))
             with open(os.path.join(work_dir, time_str, 'status.txt'), 'w') as fout:
-                fout.write('{0} {1} {2} {3}'.format(str(train_c),str(test_c)),str(ALPHA),str(step))
+                fout.write('{0} {1} {2} {3}'.format(str(train_c),str(test_c),str(ALPHA),str(step)))
+            np.save('t_matrix',s.run('t_matrix:0'))
             np.save(os.path.join(work_dir, time_str,
                                  't_matrix'), s.run('t_matrix:0'))
             print('Saved in', save_path)
