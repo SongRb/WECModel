@@ -11,4 +11,4 @@ Note: I will try to replace the heavy THUTag tool dependency with a light Python
 ## Overview
 ![Workflow Graph](https://rawgithub.com/SongRb/WECModel/master/workflow.svg)  
 ## Performance
-Currently 40% by using DAG@1 evaluation method without using negative label.  
+Currently 48% by using DAG@1 evaluation method without using negative label.  
