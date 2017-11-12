@@ -83,8 +83,8 @@ TRAIN_RATIO = 0.6  # 60% of the dataset is used for training
 _train_size = int(DS_SIZE * TRAIN_RATIO)
 _test_size = DS_SIZE - _train_size
 STARTING_ALPHA = 0.25  # learning rate
-ENDING_ALPHA = 1e-4
-ALPHA = 1e-4
+ENDING_ALPHA = 1e-6
+ALPHA = 1e-6
 LAMBDA = 0.5  # L2 regularization factor
 TRAINING_STEPS = 100001
 
@@ -142,7 +142,7 @@ with tf.Session(graph=graph) as s:
     tf.initialize_all_variables().run()
     print('Initialized')
     print(theta.eval())
-    for step in range(3000,TRAINING_STEPS):
+    for step in range(0,TRAINING_STEPS):
         if step % 10000 == 0:
             print('Shuffling train data and test data')
             train_data, train_labels, test_data, test_labels = generate_dataset(
