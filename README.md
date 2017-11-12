@@ -10,5 +10,9 @@ Java 1.8.0
 Note: I will try to replace the heavy THUTag tool dependency with a light Python script later.  
 ## Overview
 ![Workflow Graph](https://rawgithub.com/SongRb/WECModel/master/workflow.svg)  
+## Manual  
+### THUTag
+`java -Xmx3G -jar tagsuggest.jar train.TrainWEC --input=../traindata/YahooPostL6-1-[time].dat --output=/mnt/hgfs/Code/thu-tag-workspace/trainWEC7 --config="dataType=KeywordPost;para=0.5;minwordfreq=10;mintagfreq=10;selfTrans=0.2;commonLimit=2"`  
+
 ## Performance
 Currently 48% by using DAG@1 evaluation method without using negative label.  
