@@ -41,8 +41,8 @@ def saved_init(filename):
 def find_model_id(model_dir):
     return sorted(next(os.walk(model_dir))[1],key=lambda x: int(''.join(x.split('-'))),reverse=True)
 
-work_dir = os.path.join('work', 'L6-1')
-dataset_name = 'WEC-L6-1-input.npz'
+work_dir = os.path.join('work', 'L6-1-20171112')
+dataset_name = 'WEC-L6-1-input-20171112.npz'
 # model_id = find_model_id(work_dir)
 
 npzfile = np.load(os.path.join(work_dir, dataset_name))
@@ -57,19 +57,20 @@ print('Processing data with tensorflow...')
 DIMENSIONS = len(train_x[0])
 POS_DS_SIZE = len(train_x)
 # Creating training pair
-# ds = [(train_x[i], train_y[i]) for i in range(DS_SIZE)]
-# np.random.shuffle(ds)
+DS_SIZE = POS_DS_SIZE
+ds = [(train_x[i], train_y[i]) for i in range(DS_SIZE)]
+np.random.shuffle(ds)
 
-SAMPLE_NUM=3
-ds = list()
-for i in range(POS_DS_SIZE):
-    ds.append((train_x[i],train_y[i]))
-    sample_count = 0
-    while sample_count<SAMPLE_NUM:
-        random_index = random.randint(0,POS_DS_SIZE-1)
-        if random_index!=i:
-            ds.append((train_x[i],-train_y[random_index]))
-            sample_count+=1
+#SAMPLE_NUM=3
+#ds = list()
+#for i in range(POS_DS_SIZE):
+#    ds.append((train_x[i],train_y[i]))
+#    sample_count = 0
+#    while sample_count<SAMPLE_NUM:
+#        random_index = random.randint(0,POS_DS_SIZE-1)
+#        if random_index!=i:
+#            ds.append((train_x[i],-train_y[random_index]))
+#            sample_count+=1
 
 
 
@@ -93,7 +94,6 @@ ALPHA_STEP = STARTING_ALPHA/(TRAINING_STEPS/(2*DEBUG_STEPS))
 
 print('Train size: ',_train_size)
 
-
 def generate_dataset(data_set):
     np.random.shuffle(data_set)
     train_data, train_labels = map(trans, zip(*data_set[0:_train_size]))
@@ -113,7 +113,7 @@ with graph.as_default():
     y_train = tf.placeholder(tf.float32, shape=(DIMENSIONS, _train_size))
     x_test = tf.placeholder(tf.float32, shape=(DIMENSIONS, _test_size))
     y_test = tf.placeholder(tf.float32, shape=(DIMENSIONS, _test_size))
-    
+
 
     try:
         print(work_dir)
